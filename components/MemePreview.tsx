@@ -13,6 +13,51 @@ interface MemePreviewHandle {
   download: () => void;
 }
 
+/**
+ * Renders text with word wrapping on a canvas. This function works for languages
+ * with or without spaces between words by checking character by character.
+ * @param ctx The canvas rendering context.
+ * @param text The text to render.
+ * @param x The horizontal center for the text.
+ * @param y The vertical position for the bottom line of text.
+ * @param maxWidth The maximum width for a line of text.
+ * @param lineHeight The height of each line.
+ */
+const wrapText = (
+  ctx: CanvasRenderingContext2D,
+  text: string,
+  x: number,
+  y: number,
+  maxWidth: number,
+  lineHeight: number
+) => {
+  const characters = text.split('');
+  let line = '';
+  const lines: string[] = [];
+
+  for (let n = 0; n < characters.length; n++) {
+    const testLine = line + characters[n];
+    const metrics = ctx.measureText(testLine);
+    const testWidth = metrics.width;
+    if (testWidth > maxWidth && n > 0) {
+      lines.push(line);
+      line = characters[n];
+    } else {
+      line = testLine;
+    }
+  }
+  lines.push(line);
+
+  // Draw lines from the bottom up
+  let currentY = y;
+  for (let i = lines.length - 1; i >= 0; i--) {
+    ctx.strokeText(lines[i], x, currentY);
+    ctx.fillText(lines[i], x, currentY);
+    currentY -= lineHeight;
+  }
+};
+
+
 const MemePreview = forwardRef<MemePreviewHandle, MemePreviewProps>(({ imageSrc, crop, text, fontSize, textYOffset }, ref) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const PREVIEW_SIZE = 512;
@@ -73,9 +118,10 @@ const MemePreview = forwardRef<MemePreviewHandle, MemePreviewProps>(({ imageSrc,
       
       const x = canvas.width / 2;
       const y = canvas.height - textYOffset;
-      
-      ctx.strokeText(text, x, y);
-      ctx.fillText(text, x, y);
+      const maxWidth = canvas.width * 0.9; // Use 90% of canvas width for text
+      const lineHeight = calculatedFontSize * 1.2;
+
+      wrapText(ctx, text, x, y, maxWidth, lineHeight);
     };
      img.onerror = () => {
         ctx.fillStyle = '#f56565'; // text-red-500
