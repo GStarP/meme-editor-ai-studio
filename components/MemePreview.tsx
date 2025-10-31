@@ -79,11 +79,10 @@ const MemePreview = forwardRef<MemePreviewHandle, MemePreviewProps>(({ imageSrc,
     const ctx = canvas?.getContext('2d');
     if (!ctx || !canvas) return;
 
-    // Clear canvas
-    ctx.fillStyle = '#1a202c'; // bg-gray-900
-    ctx.fillRect(0, 0, canvas.width, canvas.height);
-
     if (!imageSrc || !crop || crop.width === 0 || crop.height === 0) {
+      // Clear canvas if no image
+      ctx.fillStyle = '#1a202c'; // bg-gray-900
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
       ctx.fillStyle = '#a0aec0'; // text-gray-500
       ctx.font = '20px sans-serif';
       ctx.textAlign = 'center';
@@ -95,6 +94,10 @@ const MemePreview = forwardRef<MemePreviewHandle, MemePreviewProps>(({ imageSrc,
     img.crossOrigin = "anonymous";
     img.src = imageSrc;
     img.onload = () => {
+      // Clear canvas right before drawing the new image to prevent flickering
+      ctx.fillStyle = '#1a202c'; // bg-gray-900
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+
       ctx.drawImage(
         img,
         crop.x,
@@ -124,6 +127,8 @@ const MemePreview = forwardRef<MemePreviewHandle, MemePreviewProps>(({ imageSrc,
       wrapText(ctx, text, x, y, maxWidth, lineHeight);
     };
      img.onerror = () => {
+        ctx.fillStyle = '#1a202c'; // bg-gray-900
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
         ctx.fillStyle = '#f56565'; // text-red-500
         ctx.font = '20px sans-serif';
         ctx.textAlign = 'center';

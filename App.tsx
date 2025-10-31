@@ -1,13 +1,15 @@
-import React, { useState, useRef, useCallback } from 'react';
+import React, { useState, useRef, useCallback, useEffect } from 'react';
 import ImageCropper from './components/ImageCropper';
 import MemePreview from './components/MemePreview';
+import FloatingPreview from './components/FloatingPreview';
 import { CropData } from './types';
 
 // The GoogleGenAI import is now done dynamically inside the event handler.
 
 const isInAIStudio = !!window.aistudio
 
-function App() {
+// Fix: Changed function declaration to a const with an explicit React.FC type to fix type inference issue.
+const App: React.FC = () => {
   const [sourceImage, setSourceImage] = useState<string | null>(null);
   const [memeText, setMemeText] = useState<string>('你好呀');
   const [fontSize, setFontSize] = useState<number>(51);
@@ -16,9 +18,20 @@ function App() {
   const [error, setError] = useState<string | null>(null);
   const [isAiModeEnabled, setIsAiModeEnabled] = useState(false);
   const [isVerifyingKey, setIsVerifyingKey] = useState(false);
+  const [showFloatingPreview, setShowFloatingPreview] = useState(false);
+  const [isMobile, setIsMobile] = useState(window.innerWidth < 1024);
   
   const fileInputRef = useRef<HTMLInputElement>(null);
   const memePreviewRef = useRef<{ download: () => void }>(null);
+  const previewTimeoutRef = useRef<number | null>(null);
+
+  useEffect(() => {
+    const handleResize = () => {
+      setIsMobile(window.innerWidth < 1024); // lg breakpoint in tailwind
+    };
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
 
   const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
@@ -46,7 +59,16 @@ function App() {
   
   const onCropChange = useCallback((newCrop: CropData) => {
     setCrop(newCrop);
-  }, []);
+    if (isMobile) {
+      setShowFloatingPreview(true);
+      if (previewTimeoutRef.current) {
+        window.clearTimeout(previewTimeoutRef.current);
+      }
+      previewTimeoutRef.current = window.setTimeout(() => {
+        setShowFloatingPreview(false);
+      }, 2500); // Hide after 2.5 seconds
+    }
+  }, [isMobile]);
 
   const handleAiModeToggle = async () => {
     if (isAiModeEnabled) {
@@ -75,6 +97,14 @@ function App() {
 
   return (
     <div className="min-h-screen bg-gray-900 text-white font-sans">
+      <FloatingPreview
+        isVisible={showFloatingPreview}
+        imageSrc={sourceImage}
+        crop={crop}
+        text={memeText}
+        fontSize={fontSize}
+        textYOffset={textYOffset}
+      />
       <header className="bg-gray-800/80 backdrop-blur-sm sticky top-0 z-10 shadow-lg">
         <nav className="container mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
           <h1 className="text-xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-purple-400 to-pink-600">
@@ -128,7 +158,7 @@ function App() {
                 {sourceImage ? (
                   <ImageCropper src={sourceImage} onCropChange={onCropChange} />
                 ) : (
-                  <p className="text-gray-500 text-xl">Uploaded image will appear here</p>
+                  <p className="text-gray-500">Uploaded image will appear here</p>
                 )}
               </div>
 
@@ -201,6 +231,6 @@ function App() {
       </main>
     </div>
   );
-}
+};
 
 export default App;

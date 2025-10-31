@@ -62,35 +62,38 @@ const ImageCropper: React.FC<ImageCropperProps> = ({ src, onCropChange }) => {
     setCropBox(initialCrop);
   };
   
-  const getMousePos = (e: MouseEvent | React.MouseEvent) => {
-    const rect = containerRef.current!.getBoundingClientRect();
+  const getEventPos = useCallback((e: MouseEvent | React.MouseEvent | TouchEvent | React.TouchEvent) => {
+    if (!containerRef.current) return { x: 0, y: 0 };
+    const rect = containerRef.current.getBoundingClientRect();
+    const clientX = 'touches' in e ? e.touches[0].clientX : e.clientX;
+    const clientY = 'touches' in e ? e.touches[0].clientY : e.clientY;
     return {
-      x: e.clientX - rect.left,
-      y: e.clientY - rect.top,
+      x: clientX - rect.left,
+      y: clientY - rect.top,
     };
-  };
+  }, []);
 
-  const handleMouseDown = (e: React.MouseEvent, action: 'drag' | 'resize') => {
+  const handleInteractionStart = useCallback((e: React.MouseEvent | React.TouchEvent, action: 'drag' | 'resize') => {
     e.preventDefault();
     e.stopPropagation();
-    const pos = getMousePos(e);
+    const pos = getEventPos(e);
     setStartPos(pos);
     if (action === 'drag') {
       setIsDragging(true);
     } else {
       setIsResizing(true);
     }
-  };
+  }, [getEventPos]);
 
-  const handleMouseMove = useCallback((e: MouseEvent) => {
+  const handleInteractionMove = useCallback((e: MouseEvent | TouchEvent) => {
     if (!isDragging && !isResizing) return;
-    e.preventDefault();
+    if (e.cancelable) e.preventDefault();
     e.stopPropagation();
     
     const img = imageRef.current;
     if (!img) return;
 
-    const pos = getMousePos(e);
+    const pos = getEventPos(e);
     const deltaX = pos.x - startPos.x;
     const deltaY = pos.y - startPos.y;
     
@@ -128,23 +131,29 @@ const ImageCropper: React.FC<ImageCropperProps> = ({ src, onCropChange }) => {
     });
 
     setStartPos(pos);
-  }, [isDragging, isResizing, startPos, imageOffset]);
+  }, [isDragging, isResizing, startPos, imageOffset, getEventPos]);
 
-  const handleMouseUp = useCallback(() => {
+  const handleInteractionEnd = useCallback(() => {
     setIsDragging(false);
     setIsResizing(false);
   }, []);
 
   useEffect(() => {
     if (isDragging || isResizing) {
-      window.addEventListener('mousemove', handleMouseMove);
-      window.addEventListener('mouseup', handleMouseUp);
+      window.addEventListener('mousemove', handleInteractionMove);
+      window.addEventListener('mouseup', handleInteractionEnd);
+      window.addEventListener('touchmove', handleInteractionMove, { passive: false });
+      window.addEventListener('touchend', handleInteractionEnd);
+      window.addEventListener('touchcancel', handleInteractionEnd);
       return () => {
-        window.removeEventListener('mousemove', handleMouseMove);
-        window.removeEventListener('mouseup', handleMouseUp);
+        window.removeEventListener('mousemove', handleInteractionMove);
+        window.removeEventListener('mouseup', handleInteractionEnd);
+        window.removeEventListener('touchmove', handleInteractionMove);
+        window.removeEventListener('touchend', handleInteractionEnd);
+        window.removeEventListener('touchcancel', handleInteractionEnd);
       };
     }
-  }, [isDragging, isResizing, handleMouseMove, handleMouseUp]);
+  }, [isDragging, isResizing, handleInteractionMove, handleInteractionEnd]);
 
   return (
     <div ref={containerRef} className="relative w-full h-full select-none flex items-center justify-center">
@@ -178,12 +187,14 @@ const ImageCropper: React.FC<ImageCropperProps> = ({ src, onCropChange }) => {
                 height: cropBox.height,
                 touchAction: 'none'
                 }}
-                onMouseDown={(e) => handleMouseDown(e, 'drag')}
+                onMouseDown={(e) => handleInteractionStart(e, 'drag')}
+                onTouchStart={(e) => handleInteractionStart(e, 'drag')}
             >
                 {/* Resize Handle */}
                 <div
                 className="absolute -bottom-2 -right-2 w-4 h-4 bg-white rounded-full cursor-nwse-resize"
-                onMouseDown={(e) => handleMouseDown(e, 'resize')}
+                onMouseDown={(e) => handleInteractionStart(e, 'resize')}
+                onTouchStart={(e) => handleInteractionStart(e, 'resize')}
                 ></div>
             </div>
         </>
