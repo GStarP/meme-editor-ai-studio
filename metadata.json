@@ -1,5 +1,5 @@
 {
-  "name": "Meme Generator",
+  "name": "Meme Editor",
   "description": "An interactive tool to create custom memes. Users can upload an image, crop it in a 1:1 aspect ratio, and add custom text. The final meme can be previewed in real-time and downloaded.",
   "requestFramePermissions": []
 }

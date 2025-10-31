@@ -80,14 +80,14 @@ const MemePreview = forwardRef<MemePreviewHandle, MemePreviewProps>(({ imageSrc,
     if (!ctx || !canvas) return;
 
     // Clear canvas
-    ctx.fillStyle = '#2d3748'; // bg-gray-800
+    ctx.fillStyle = '#1a202c'; // bg-gray-900
     ctx.fillRect(0, 0, canvas.width, canvas.height);
 
     if (!imageSrc || !crop || crop.width === 0 || crop.height === 0) {
       ctx.fillStyle = '#a0aec0'; // text-gray-500
       ctx.font = '20px sans-serif';
       ctx.textAlign = 'center';
-      ctx.fillText('Your meme will appear here', canvas.width / 2, canvas.height / 2);
+      ctx.fillText('Preview will appear here', canvas.width / 2, canvas.height / 2);
       return;
     }
 
